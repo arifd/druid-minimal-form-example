@@ -1,9 +1,14 @@
 use druid::{
     text::ValidationError,
     widget::{Either, Label, SizedBox, TextBoxEvent, ValidationDelegate},
-    BoxConstraints, Color, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx,
+    BoxConstraints, Color, Data, Env, Event, EventCtx, Key, LayoutCtx, LifeCycle, LifeCycleCtx,
     PaintCtx, Point, Selector, Size, UpdateCtx, Widget, WidgetExt, WidgetId, WidgetPod,
 };
+
+/// A Selector to identify one form form another
+/// A WidgetId to distinguish between different fields in the form
+/// A bool to track it's status (validity)
+type FormValidityStatus = Selector<(WidgetId, bool)>;
 
 ///////////////////////////////////////////////////////////////////////////////
 // ERROR DISPLAY WIDGET                                                      //
@@ -13,7 +18,7 @@ use druid::{
 ///
 /// The `id` param is the `WidgetId` that this widget should use; that id
 /// will be sent messages when it should display or clear an error.
-pub fn error_display_widget<T: Data>(id: WidgetId) -> impl Widget<T> {
+pub fn error_display_widget<T: Data>(id: WidgetId, selector: FormValidityStatus) -> impl Widget<T> {
     ErrorController::new(
         Either::new(
             |d: &Option<ValidationError>, _| d.is_some(),
@@ -25,6 +30,7 @@ pub fn error_display_widget<T: Data>(id: WidgetId) -> impl Widget<T> {
             SizedBox::empty(),
         )
         .with_id(id),
+        selector,
     )
 }
 
@@ -32,7 +38,9 @@ pub fn error_display_widget<T: Data>(id: WidgetId) -> impl Widget<T> {
 // ERROR CONTROLLER                                                          //
 ///////////////////////////////////////////////////////////////////////////////
 
-/// A widget that manages a child which can display an error.
+/// A widget that manages a child which can display an error. And hols a selector,
+/// In order to pass back to the App Delegate it's status.
+/// The Appdelegate can then store them in a hashmap, and check when all are valid
 ///
 /// This is not a blessed pattern, but works around certain limitations of Druid,
 /// using Commands.
@@ -46,13 +54,15 @@ pub fn error_display_widget<T: Data>(id: WidgetId) -> impl Widget<T> {
 struct ErrorController<W> {
     child: WidgetPod<Option<ValidationError>, W>,
     error: Option<ValidationError>,
+    selector: FormValidityStatus,
 }
 
 impl<W: Widget<Option<ValidationError>>> ErrorController<W> {
-    fn new(child: W) -> ErrorController<W> {
+    fn new(child: W, selector: FormValidityStatus) -> ErrorController<W> {
         ErrorController {
             child: WidgetPod::new(child),
             error: None,
+            selector,
         }
     }
 }
@@ -62,10 +72,12 @@ impl<T, W: Widget<Option<ValidationError>>> Widget<T> for ErrorController<W> {
         match event {
             Event::Command(cmd) if cmd.is(SHOW_ERROR) => {
                 self.error = Some(cmd.get_unchecked(SHOW_ERROR).to_owned());
+                ctx.submit_command(self.selector.with((ctx.widget_id(), false)));
                 ctx.request_update();
             }
             Event::Command(cmd) if cmd.is(CLEAR_ERROR) => {
                 self.error = None;
+                ctx.submit_command(self.selector.with((ctx.widget_id(), true)));
                 ctx.request_update();
             }
             _ => self.child.event(ctx, event, &mut self.error, env),
@@ -73,6 +85,10 @@ impl<T, W: Widget<Option<ValidationError>>> Widget<T> for ErrorController<W> {
     }
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, _: &T, env: &Env) {
+        if let LifeCycle::WidgetAdded = event {
+            ctx.submit_command(self.selector.with((ctx.widget_id(), false)));
+        }
+
         self.child.lifecycle(ctx, event, &self.error, env);
     }
 
