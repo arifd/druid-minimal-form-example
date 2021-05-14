@@ -1,7 +1,7 @@
 use druid::{
     text::ValidationError,
     widget::{Either, Label, SizedBox, TextBoxEvent, ValidationDelegate},
-    BoxConstraints, Color, Data, Env, Event, EventCtx, Key, LayoutCtx, LifeCycle, LifeCycleCtx,
+    BoxConstraints, Color, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx,
     PaintCtx, Point, Selector, Size, UpdateCtx, Widget, WidgetExt, WidgetId, WidgetPod,
 };
 
@@ -118,10 +118,10 @@ const ERROR_TEXT_COLOR: Color = Color::rgb8(0xB6, 0x00, 0x04);
 
 /// Sent by the [`TextBoxErrorDelegate`] when an error should be displayed.
 const SHOW_ERROR: Selector<ValidationError> =
-    Selector::new("druid-minimal-form-validation.show-error");
+    Selector::new(concat!(file!(), "-", line!(), "-", "SHOW-ERROR"));
 
 /// Sent by the [`TextBoxErrorDelegate`] when an error should be cleared.
-const CLEAR_ERROR: Selector = Selector::new("druid-minimal-form-validation.clear-error");
+const CLEAR_ERROR: Selector = Selector::new(concat!(file!(), "-", line!(), "-", "CLEAR-ERROR"));
 
 pub struct TextBoxErrorDelegate {
     target: WidgetId,
@@ -140,7 +140,7 @@ impl ValidationDelegate for TextBoxErrorDelegate {
                 ctx.submit_command(CLEAR_ERROR.to(self.target));
             }
             TextBoxEvent::PartiallyInvalid(err) => {
-                ctx.submit_command(SHOW_ERROR.with(err.to_owned()).to(self.target));
+                ctx.submit_command(SHOW_ERROR.with(err).to(self.target));
             }
             _ => (),
         }

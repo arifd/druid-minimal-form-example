@@ -24,7 +24,6 @@ impl Formatter<Arc<String>> for NameFormatter {
     }
 
     fn validate_partial_input(&self, input: &str, _sel: &Selection) -> Validation {
-        // Can't be empty
         if input.len() == 0 {
             return Validation::failure(Error::Empty);
         }
@@ -48,8 +47,7 @@ impl Formatter<Arc<String>> for TelephoneFormatter {
     }
 
     fn validate_partial_input(&self, input: &str, _sel: &Selection) -> Validation {
-        // Can't be empty
-        if input.len() == 0 {
+        if input.is_empty() {
             return Validation::failure(Error::Empty);
         }
 
