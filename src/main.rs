@@ -1,5 +1,5 @@
 mod validation;
-use std::sync::{atomic::AtomicU16, Arc};
+use std::sync::Arc;
 use validation::{formatters::*, widgets::TextBoxErrorDelegate};
 
 use druid::{
@@ -37,9 +37,7 @@ fn form_field_ui<T: Data + std::fmt::Debug>(
     placeholder: &str,
     formatter: impl Formatter<T> + 'static,
 ) -> impl Widget<T> {
-    // Unique identifier
-    static ID: AtomicU16 = AtomicU16::new(1);
-    let widget_id = WidgetId::reserved(ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed));
+    let widget_id = WidgetId::next();
 
     // Widgets
     let input = TextBox::new()
